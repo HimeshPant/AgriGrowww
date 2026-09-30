@@ -10,6 +10,7 @@ import { CropHealth } from './pages/CropHealth';
 import { Weather } from './pages/Weather';
 import { Market } from './pages/Market';
 import { Assistant } from './pages/Assistant';
+import { NameEntry } from './pages/NameEntry';
 
 import { DEFAULT_FARMER } from './data/defaultFarmer';
 import { WEATHER_FORECAST } from './data/weather';
@@ -28,6 +29,19 @@ export function App() {
 
   // Active navigation tab
   const [currentTab, setCurrentTab] = useState('dashboard');
+
+  // Track whether user has entered their name yet
+  const [hasName, setHasName] = useState(() => {
+    const saved = localStorage.getItem('agrigrow_farmer');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Consider the user has named themselves if the saved name differs from default
+        return !!parsed.name && parsed.name !== 'Himesh Pant';
+      } catch { return false; }
+    }
+    return false;
+  });
 
   // Farmer Profile (defaults to Hero Scenario: Pithoragarh, Uttarakhand)
   const [farmer, setFarmer] = useState(() => {
@@ -66,11 +80,35 @@ export function App() {
     setCurrentTab('dashboard');
   };
 
+  // Called from NameEntry page — persists the name into farmer profile
+  const handleNameSubmit = (enteredName) => {
+    const updatedFarmer = {
+      ...farmer,
+      name: enteredName,
+      hindiName: enteredName
+    };
+    setFarmer(updatedFarmer);
+    localStorage.setItem('agrigrow_farmer', JSON.stringify(updatedFarmer));
+    setHasName(true);
+    setCurrentTab('dashboard');
+  };
+
   // Pre-calculate decision models
   const weather = WEATHER_FORECAST;
   const advisory = generateDailyAdvisory(farmer, weather);
   const risks = evaluateFarmRisks(farmer, weather);
   const market = MARKET_DATA;
+
+  // — FIRST SCREEN GATE: show name entry until the user submits their name —
+  if (!hasName) {
+    return (
+      <NameEntry
+        onContinue={handleNameSubmit}
+        language={language}
+        setLanguage={setLanguage}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F5ED] text-[#12372A] font-sans pb-20 lg:pb-0 flex flex-col">
